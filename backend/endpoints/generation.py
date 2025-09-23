@@ -5,7 +5,8 @@ from fastapi.responses import JSONResponse
 from backend.utils.logger import app_logger
 from backend.utils.file_utils import allowed_file, save_uploaded_file
 from backend.services.generation_service.service_factory import get_service
-
+from backend.config.settings import PHOTOTOOM_API_KEY
+from backend.services.bg_rem.download_service import process_download_image
 router = APIRouter()
 
 
@@ -64,4 +65,26 @@ async def generate_image(
         # Re-raise to let FastAPI return the original status code
         raise e
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/download")
+async def download_image(file_path: str = Form(...)):
+    app_logger.info(
+        "DOWNLOAD IMAGE ENDPOINT ACCESSED",
+        extra={
+            "file_path": file_path,
+        },
+    )
+    
+    if not PHOTOTOOM_API_KEY:
+        app_logger.error("PHOTOTOOM API KEY NOT FOUND IN CONFIG")
+        raise HTTPException(status_code=500, detail="PHOTOTOOM API KEY NOT CONFIGURED")
+
+    # Delegate to the worker function
+    try:
+        app_logger.info(f"DELEGATING TO THE WORKER FUNCTION FOR BG REMOVAL")
+        output_path = process_download_image(input_path=file_path, api_key=PHOTOTOOM_API_KEY)
+        return output_path
+    except Exception as e:
+        app_logger.error(f"FAILED TO REMOVE BACKGROUND USING PHOTOTOOM: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
