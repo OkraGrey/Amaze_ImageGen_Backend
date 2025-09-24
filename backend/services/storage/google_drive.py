@@ -1,15 +1,16 @@
 import os
 import uuid
-import tempfile
 from fastapi import UploadFile
 from backend.services.storage.base import FileStorage
+from backend.utils.logger import app_logger
 from backend.config.settings import GOOGLE_DRIVE_APP_FOLDER_ID
 from backend.utils.google_drive_utils import (
     get_drive_service,
     get_or_create_folder,
     upload_file_content,
     download_file,
-    make_file_public
+    make_file_public,
+    download_file_content
 )
 
 class GoogleDriveStorage(FileStorage):
@@ -20,9 +21,9 @@ class GoogleDriveStorage(FileStorage):
         self.service = get_drive_service()
         self.uploads_folder_id = get_or_create_folder(self.service, "uploads", parent_id=GOOGLE_DRIVE_APP_FOLDER_ID)
         self.results_folder_id = get_or_create_folder(self.service, "results", parent_id=GOOGLE_DRIVE_APP_FOLDER_ID)
-        self.temp_dir = tempfile.mkdtemp()
 
     def save_upload(self, file: UploadFile) -> str:
+        app_logger.info(f"ENTERING SAVE UPLOAD FUNCTION FOR GCP")
         content = file.file.read()
         filename = f"{uuid.uuid4().hex}_{file.filename}"
         file_id = upload_file_content(
@@ -45,18 +46,11 @@ class GoogleDriveStorage(FileStorage):
         )
         return file_id
 
-    def get_upload_path(self, identifier: str) -> str:
-        temp_path = os.path.join(self.temp_dir, identifier)
-        download_file(self.service, identifier, temp_path)
-        return temp_path
-
-    def get_result_path(self, identifier: str) -> str:
-        temp_path = os.path.join(self.temp_dir, identifier)
-        download_file(self.service, identifier, temp_path)
-        return temp_path
-
-    def file_exists(self, path: str) -> bool:
-        return os.path.exists(path)
-
     def get_results_uri(self, identifier: str) -> str:
         return make_file_public(self.service, identifier)
+
+    def get_upload_content(self, identifier: str) -> bytes:
+        return download_file_content(self.service, identifier)
+
+    def get_result_content(self, identifier: str) -> bytes:
+        return download_file_content(self.service, identifier)

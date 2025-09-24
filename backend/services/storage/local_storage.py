@@ -34,14 +34,21 @@ class LocalStorage(FileStorage):
             f.write(image_data)
         return filename
 
-    def get_upload_path(self, identifier: str) -> str:
+    def _get_upload_path(self, identifier: str) -> str:
         return os.path.join(UPLOAD_DIR, identifier)
 
-    def get_result_path(self, identifier: str) -> str:
+    def _get_result_path(self, identifier: str) -> str:
         return os.path.join(RESULT_DIR, identifier)
-
-    def file_exists(self, path: str) -> bool:
-        return os.path.exists(path)
 
     def get_results_uri(self, identifier: str) -> str:
         return f"/results/{identifier}"
+
+    def get_upload_content(self, identifier: str) -> bytes:
+        path = self._get_upload_path(identifier)
+        with open(path, "rb") as f:
+            return f.read()
+
+    def get_result_content(self, identifier: str) -> bytes:
+        path = self._get_result_path(identifier)
+        with open(path, "rb") as f:
+            return f.read()

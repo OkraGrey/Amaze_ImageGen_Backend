@@ -5,6 +5,7 @@ from io import BytesIO
 import os
 import uuid
 from pathlib import Path
+import io
 
 from backend.config.settings import GEMINI_API_KEY, GEMINI_DESC_MODEL,GEMINI_IMG_MODEL
 from backend.services.generation_service.base_service import BaseImageGenerationService
@@ -19,12 +20,13 @@ class GeminiService(BaseImageGenerationService):
         self.desc_model = GEMINI_DESC_MODEL
         self.storage_service = get_storage_service()
     
-    def generate_image(self, prompt, image_path=None):
+    def generate_image(self, prompt, upload_identifier=None):
         try:
             contents = [prompt]
-            if image_path and self.storage_service.file_exists(image_path):
-                app_logger.info(f"RECIEVED IMAGE PATH")
-                image = Image.open(image_path)
+            if upload_identifier:
+                app_logger.info(f"RECIEVED IMAGE IDENTIFIER")
+                image_bytes = self.storage_service.get_upload_content(upload_identifier)
+                image = Image.open(io.BytesIO(image_bytes))
                 contents.append(image)
             else:
                 app_logger.info(f"NO IMAGE PATH PROVIDED. GOING FORWARD WITH PROMPT ONLY")
@@ -49,18 +51,19 @@ class GeminiService(BaseImageGenerationService):
             print(f"ERROR GENERATING IMAGE: {str(e)}")
             raise
     
-    def generate_image_description(self, image_path=None):
+    def generate_image_description(self, result_identifier=None):
         app_logger.info(f"GENERATING IMAGE DESCRIPTION")
         try:
             # Initialized contents with the user prompt
             contents = ["Generate a detailed JSON description of the given image"]
-            if image_path and self.storage_service.file_exists(image_path):
-                print(f"[INFO]---RECIEVED IMAGE PATH---")
-                image = Image.open(image_path)
+            if result_identifier:
+                print(f"[INFO]---RECIEVED IMAGE IDENTIFIER---")
+                image_bytes = self.storage_service.get_result_content(result_identifier)
+                image = Image.open(io.BytesIO(image_bytes))
                 contents.append(image)
             else:
-                app_logger.error(f"NO IMAGE PATH PROVIDED")
-                raise ValueError("IMAGE PATH IS REQUIRED!")
+                app_logger.error(f"NO IMAGE IDENTIFIER PROVIDED")
+                raise ValueError("IMAGE IDENTIFIER IS REQUIRED!")
             
             app_logger.info(f"CALLING GEMINI CLIENT")
             response = self.client.models.generate_content(

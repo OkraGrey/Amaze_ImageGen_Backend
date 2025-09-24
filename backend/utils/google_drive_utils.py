@@ -6,6 +6,8 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload, MediaIoBaseUpload
 from backend.config.settings import GOOGLE_CLIENT_SECRET_FILE, GOOGLE_TOKEN_FILE
+from googleapiclient.errors import HttpError
+from backend.utils.logger import app_logger
 
 # This scope allows the app to access only the files it has created or opened.
 SCOPES = ["https://www.googleapis.com/auth/drive.file"]
@@ -87,10 +89,27 @@ def download_file(service, file_id, destination_path):
     with open(destination_path, "wb") as f:
         f.write(fh.getbuffer())
 
-def make_file_public(service, file_id):
-    """
-    Makes a file public and returns its web view link.
-    """
-    service.permissions().create(fileId=file_id, body={'type': 'anyone', 'role': 'reader'}).execute()
-    file = service.files().get(fileId=file_id, fields='webContentLink').execute()
-    return file.get('webContentLink')
+def download_file_content(service, file_id: str) -> bytes:
+    """Downloads a file's content as bytes."""
+    try:
+        request = service.files().get_media(fileId=file_id)
+        file_content = io.BytesIO()
+        downloader = MediaIoBaseDownload(file_content, request)
+        done = False
+        while done is False:
+            status, done = downloader.next_chunk()
+            app_logger.info(f"Download {int(status.progress() * 100)}%.")
+        return file_content.getvalue()
+    except HttpError as error:
+        app_logger.error(f"An error occurred: {error}")
+        return None
+
+def make_file_public(service, file_id: str) -> str:
+    """Makes a file public and returns its web view link."""
+    try:
+        service.permissions().create(fileId=file_id, body={'type': 'anyone', 'role': 'reader'}).execute()
+        file = service.files().get(fileId=file_id, fields='webContentLink').execute()
+        return file.get('webContentLink')
+    except HttpError as error:
+        app_logger.error(f"An error occurred: {error}")
+        return None

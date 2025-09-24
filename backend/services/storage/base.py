@@ -17,29 +17,22 @@ class FileStorage(ABC):
         pass
 
     @abstractmethod
-    def get_upload_path(self, identifier: str) -> str:
+    def get_results_uri(self, identifier: str) -> str:
         """
-        Gets the full path for an uploaded file from its identifier.
-        """
-        pass
-
-    @abstractmethod
-    def get_result_path(self, identifier: str) -> str:
-        """
-        Gets the full path for a result file from its identifier.
+        Returns a URI for accessing the result file.
         """
         pass
     
     @abstractmethod
-    def file_exists(self, path: str) -> bool:
+    def get_upload_content(self, identifier: str) -> bytes:
         """
-        Checks if a file exists at the given path.
+        Gets the content of an uploaded file as bytes.
         """
         pass
 
     @abstractmethod
-    def get_results_uri(self, identifier: str) -> str:
+    def get_result_content(self, identifier: str) -> bytes:
         """
-        Returns a URI for accessing the result file.
+        Gets the content of a result file as bytes.
         """
         pass

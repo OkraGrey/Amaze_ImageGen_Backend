@@ -1,0 +1,36 @@
+name: Test Google Cloud Authentication
+
+on:
+  push:
+    branches:
+      - main # This runs whenever you push to the 'main' branch
+
+jobs:
+  test-gcp-auth:
+    runs-on: ubuntu-latest
+    
+    # These permissions are required for the authentication to work
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+    - name: 'Checkout code'
+      uses: 'actions/checkout@v3'
+
+    - name: 'Authenticate to Google Cloud'
+      id: 'auth'
+      uses: 'google-github-actions/auth@v2'
+      with:
+        workload_identity_provider: 'projects/862473826863/locations/global/workloadIdentityPools/imagegen-app-pool/providers/github-provider'
+        service_account: 'my-app-service-account@imagegen-473109.iam.gserviceaccount.com'
+
+    - name: 'Set up Cloud SDK'
+      uses: 'google-github-actions/setup-gcloud@v2'
+
+    - name: 'Test Authentication by Printing Access Token'
+      run: |-
+        echo "✅ Authentication successful!"
+        echo "✅ The gcloud CLI is now authenticated as your service account."
+        echo "✅ Running 'gcloud auth print-access-token' to prove it:"
+        gcloud auth print-access-token

@@ -1,4 +1,6 @@
 import os
+import tempfile
+from contextlib import contextmanager
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from typing import Optional
 from fastapi.responses import JSONResponse
@@ -36,10 +38,10 @@ async def generate_image(
 
             if not allowed_file(file.filename):
                 raise HTTPException(status_code=400, detail="FILE TYPE NOT ALLOWED")
-
+            
+            app_logger.info(f"SAVING FILE TO STORAGE")
             upload_identifier = storage_service.save_upload(file)
-            file_path = storage_service.get_upload_path(upload_identifier)
-            app_logger.info(f"FILE SAVED SUCCESSFULLY")
+            app_logger.info(f"FILE SAVED SUCCESSFULLY WITH IDENTIFIER: {upload_identifier}")
         
         if not prompt.strip():
             raise HTTPException(status_code=400, detail="PROMPT CANNOT BE EMPTY")
@@ -53,7 +55,7 @@ async def generate_image(
         if service:
             app_logger.info(f"RECIEVED FACTORY OBJECT")
             app_logger.info(f"ACCESSING GENERATE IMAGE ")
-            result_identifier = service.generate_image(prompt, file_path)
+            result_identifier = service.generate_image(prompt, upload_identifier)
             result_uri = storage_service.get_results_uri(result_identifier)
             
             return JSONResponse(content={
@@ -72,6 +74,18 @@ async def generate_image(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@contextmanager
+def temporary_file(content: bytes, suffix: str = ".png"):
+    """Context manager for creating a temporary file from content."""
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+            temp_file.write(content)
+            temp_file_path = temp_file.name
+        yield temp_file_path
+    finally:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+
 @router.post("/download")
 async def download_image(file_identifier: str = Form(...)):
     app_logger.info(
@@ -88,16 +102,18 @@ async def download_image(file_identifier: str = Form(...)):
     storage_service = get_storage_service()
     
     try:
-        # Get a temporary local path for the file
-        local_input_path = storage_service.get_result_path(file_identifier)
+        # Get the file content
+        image_content = storage_service.get_result_content(file_identifier)
         
-        app_logger.info(f"DELEGATING TO THE WORKER FUNCTION FOR BG REMOVAL")
-        output_path = process_download_image(input_path=local_input_path, api_key=PHOTOTOOM_API_KEY)
+        # Use a temporary file for processing
+        with temporary_file(image_content) as local_input_path:
+            app_logger.info(f"DELEGATING TO THE WORKER FUNCTION FOR BG REMOVAL")
+            output_path = process_download_image(input_path=local_input_path, api_key=PHOTOTOOM_API_KEY)
 
-        # Upload the processed file back to storage
-        with open(output_path, "rb") as f:
-            image_data = f.read()
-
+            # Upload the processed file back to storage
+            with open(output_path, "rb") as f:
+                image_data = f.read()
+        
         processed_identifier = storage_service.save_result(image_data, extension='png')
         processed_uri = storage_service.get_results_uri(processed_identifier)
 
@@ -122,18 +138,11 @@ async def generate_image_description(file_identifier: str = Form(...)):
     
     storage_service = get_storage_service()
     try:
-        # Get a temporary local path for the file
-        local_input_path = storage_service.get_result_path(file_identifier)
-
-        if not storage_service.file_exists(local_input_path):
-            app_logger.error("FILE PATH NOT FOUND")
-            raise HTTPException(status_code=400, detail="FILE PATH NOT FOUND")
-        
         # Delegate to the worker function
         app_logger.info(f"DELEGATING TO THE WORKER FUNCTION FOR IMAGE DESCRIPTION")
         app_logger.info(f"GETTING SERVICE FROM THE FACTORY WITH MODEL NAME: gemini")
         service = get_service() # By default gemini is used
-        description = service.generate_image_description(local_input_path)
+        description = service.generate_image_description(file_identifier)
         app_logger.info(f"IMAGE DESCRIPTION GENERATED SUCCESSFULLY: {description}")
         return description
     except Exception as e:

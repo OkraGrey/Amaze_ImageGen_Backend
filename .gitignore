@@ -75,3 +75,5 @@ Tickets/
 
 # Local Testing file
 testing_main.py
+token.json
+client_secret.json
