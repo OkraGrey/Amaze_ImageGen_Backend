@@ -9,3 +9,10 @@ pytest-cov
 pytest-html
 pytest-xdist
 httpx
+uvicorn
+gunicorn
+python-multipart
+# Google Drive
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib

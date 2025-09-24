@@ -69,3 +69,9 @@ results/
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Project-specific folders
+Tickets/
+
+# Local Testing file
+testing_main.py

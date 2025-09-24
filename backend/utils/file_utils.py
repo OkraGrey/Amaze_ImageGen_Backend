@@ -3,10 +3,10 @@ import uuid
 from pathlib import Path
 import http.client
 import mimetypes
-from backend.config.settings import UPLOAD_DIR, ALLOWED_EXTENSIONS, MAX_FILE_SIZE
+from backend.config.settings import ALLOWED_EXTENSIONS
 from PIL import Image
 from dotenv import load_dotenv
-
+from backend.utils.logger import app_logger
 # Load environment variables
 load_dotenv()
 
@@ -14,56 +14,14 @@ def allowed_file(filename):
 
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def save_uploaded_file(file):
-    """
-    Save an uploaded file to the upload directory.
-    
-    Args:
-        file: The uploaded file object
-        
-    Returns:
-        str: Path to the saved file
-    """
-    # Check file size
-    file.file.seek(0, os.SEEK_END)
-    file_size = file.file.tell()
-    file.file.seek(0)
-    
-    if file_size > MAX_FILE_SIZE:
-        raise ValueError(f"File size exceeds the maximum allowed size of {MAX_FILE_SIZE / (1024 * 1024)}MB")
-    
-    # Generate a unique filename
-    original_filename = file.filename
-    extension = original_filename.rsplit('.', 1)[1].lower() if '.' in original_filename else ''
-    filename = f"{uuid.uuid4().hex}.{extension}"
-    
-    # Use tmp subdirectory for test uploads and temporary files
-    tmp_dir = os.path.join(UPLOAD_DIR, "tmp")
-    os.makedirs(tmp_dir, exist_ok=True)
-    
-    # Save the file in tmp directory
-    file_path = os.path.join(tmp_dir, filename)
-    with open(file_path, "wb") as buffer:
-        buffer.write(file.file.read())
-    
-    return file_path
-
 def remove_bg(input_path):
-    """
-    Removes the background from an image using PhotoRoom API.
 
-    Args:
-        input_path (str): The path to the input image.
-
-    Returns:
-        str: The path to the output image with the background removed.
-    """
-    print(f"[INFO]--- Starting PhotoRoom background removal for: {input_path} ---")
+    app_logger.info(f"STARTING PHOTOTOOM BACKGROUND REMOVAL FOR: {input_path}")
 
     # Get API key from environment
     api_key = os.getenv('PHOTOTOOM_API_KEY')
     if not api_key:
-        print(f"[ERROR]--- PhotoRoom API key not found in environment variables ---")
+        app_logger.error(f"PHOTOTOOM API KEY NOT FOUND IN ENVIRONMENT VARIABLES")
         raise ValueError("PhotoRoom API key not configured")
 
     # Create output path with unique suffix
@@ -80,7 +38,7 @@ def remove_bg(input_path):
         if content_type is None:
             content_type = 'application/octet-stream'
 
-        print(f"[INFO]--- Reading image file for PhotoRoom API ---")
+        app_logger.info(f"Reading image file for PhotoRoom API")
 
         # Prepare the POST data
         with open(input_path, 'rb') as f:
@@ -93,7 +51,7 @@ def remove_bg(input_path):
             f"Content-Type: {content_type}\r\n\r\n"
         ).encode('utf-8') + image_data + f"\r\n--{boundary}--\r\n".encode('utf-8')
 
-        print(f"[INFO]--- Calling PhotoRoom API for background removal ---")
+        app_logger.info(f"CALLING PHOTOTOOM API FOR BACKGROUND REMOVAL")
 
         # Set up the HTTP connection and headers
         conn = http.client.HTTPSConnection('sdk.photoroom.com')
@@ -112,13 +70,13 @@ def remove_bg(input_path):
             response_data = response.read()
             with open(output_path, 'wb') as out_f:
                 out_f.write(response_data)
-            print(f"[INFO]--- PhotoRoom background removal successful ---")
-            print(f"[INFO]--- Image saved to: {output_path} ---")
+            app_logger.info(f"PHOTOTOOM BACKGROUND REMOVAL SUCCESSFUL")
+            app_logger.info(f"IMAGE SAVED TO: {output_path}")
         else:
             error_msg = f"PhotoRoom API error: {response.status} - {response.reason}"
-            print(f"[ERROR]--- {error_msg} ---")
+            app_logger.error(f"ERROR OCCURED: {error_msg}")
             error_body = response.read()
-            print(f"[ERROR]--- Response: {error_body} ---")
+            app_logger.error(f"RESPONSE: {error_body}")
             raise Exception(error_msg)
 
         # Close the connection
@@ -127,5 +85,5 @@ def remove_bg(input_path):
         return output_path
 
     except Exception as e:
-        print(f"[ERROR]--- Failed to remove background using PhotoRoom: {str(e)} ---")
+        app_logger.error(f"FAILED TO REMOVE BACKGROUND USING PHOTOTOOM: {str(e)}")
         raise

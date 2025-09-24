@@ -31,3 +31,11 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 
 # Max file size (10MB)
 MAX_FILE_SIZE = 10 * 1024 * 1024
+
+# Storage Type
+STORAGE_TYPE = os.getenv("STORAGE_TYPE", "local")
+
+# Google Drive settings
+GOOGLE_DRIVE_APP_FOLDER_ID = os.getenv("GOOGLE_DRIVE_APP_FOLDER_ID")
+GOOGLE_CLIENT_SECRET_FILE = os.path.join(BASE_DIR, "client_secret.json")
+GOOGLE_TOKEN_FILE = os.path.join(BASE_DIR, "token.json")

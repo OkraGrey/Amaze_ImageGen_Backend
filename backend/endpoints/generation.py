@@ -3,10 +3,12 @@ from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from typing import Optional
 from fastapi.responses import JSONResponse
 from backend.utils.logger import app_logger
-from backend.utils.file_utils import allowed_file, save_uploaded_file
+from backend.utils.file_utils import allowed_file
 from backend.services.generation_service.service_factory import get_service
+from backend.services.storage.storage_factory import get_storage_service
 from backend.config.settings import PHOTOTOOM_API_KEY
 from backend.services.bg_rem.download_service import process_download_image
+
 router = APIRouter()
 
 
@@ -24,15 +26,19 @@ async def generate_image(
         "filename": file.filename if file else None
     })
     
+    storage_service = get_storage_service()
+
     try:
         file_path = None
+        upload_identifier = None
         if file and file.filename:
             app_logger.info(f"CHECKING IF FILE IS ALLOWED")
 
             if not allowed_file(file.filename):
                 raise HTTPException(status_code=400, detail="FILE TYPE NOT ALLOWED")
 
-            file_path = save_uploaded_file(file)
+            upload_identifier = storage_service.save_upload(file)
+            file_path = storage_service.get_upload_path(upload_identifier)
             app_logger.info(f"FILE SAVED SUCCESSFULLY")
         
         if not prompt.strip():
@@ -47,15 +53,14 @@ async def generate_image(
         if service:
             app_logger.info(f"RECIEVED FACTORY OBJECT")
             app_logger.info(f"ACCESSING GENERATE IMAGE ")
-            result_path = service.generate_image(prompt, file_path)
-
-            app_logger.info(f"RESULT PATH RECIEVED FROM SERVICE: {result_path}")
-            result_filename = os.path.basename(result_path)
-        
+            result_identifier = service.generate_image(prompt, file_path)
+            result_uri = storage_service.get_results_uri(result_identifier)
+            
             return JSONResponse(content={
                 "success": True,
                 "message": "Image generated successfully",
-                "result_path": f"/results/{result_filename}"
+                "result_path": result_uri,
+                "result_identifier": result_identifier
             })
         else:
             raise HTTPException(status_code=400, detail="SERVICE NOT FOUND")
@@ -68,11 +73,11 @@ async def generate_image(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/download")
-async def download_image(file_path: str = Form(...)):
+async def download_image(file_identifier: str = Form(...)):
     app_logger.info(
         "DOWNLOAD IMAGE ENDPOINT ACCESSED",
         extra={
-            "file_path": file_path,
+            "file_identifier": file_identifier,
         },
     )
     
@@ -80,34 +85,55 @@ async def download_image(file_path: str = Form(...)):
         app_logger.error("PHOTOTOOM API KEY NOT FOUND IN CONFIG")
         raise HTTPException(status_code=500, detail="PHOTOTOOM API KEY NOT CONFIGURED")
 
-    # Delegate to the worker function
+    storage_service = get_storage_service()
+    
     try:
+        # Get a temporary local path for the file
+        local_input_path = storage_service.get_result_path(file_identifier)
+        
         app_logger.info(f"DELEGATING TO THE WORKER FUNCTION FOR BG REMOVAL")
-        output_path = process_download_image(input_path=file_path, api_key=PHOTOTOOM_API_KEY)
-        return output_path
+        output_path = process_download_image(input_path=local_input_path, api_key=PHOTOTOOM_API_KEY)
+
+        # Upload the processed file back to storage
+        with open(output_path, "rb") as f:
+            image_data = f.read()
+
+        processed_identifier = storage_service.save_result(image_data, extension='png')
+        processed_uri = storage_service.get_results_uri(processed_identifier)
+
+        return JSONResponse(content={
+            "success": True,
+            "message": "Background removed successfully",
+            "result_path": processed_uri,
+            "result_identifier": processed_identifier
+        })
     except Exception as e:
         app_logger.error(f"FAILED TO REMOVE BACKGROUND USING PHOTOTOOM: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/generate/generate_image_description")
-async def generate_image_description(file_path: str = Form(...)):
+async def generate_image_description(file_identifier: str = Form(...)):
     app_logger.info(
         "IMG DESCRIPTION ENDPOINT ACCESSED",
         extra={
-            "file_path": file_path,
+            "file_identifier": file_identifier,
         },
     )
     
-    if not os.path.exists(file_path):
-        app_logger.error("FILE PATH NOT FOUND")
-        raise HTTPException(status_code=400, detail="FILE PATH NOT FOUND")
-    
-    # Delegate to the worker function
+    storage_service = get_storage_service()
     try:
+        # Get a temporary local path for the file
+        local_input_path = storage_service.get_result_path(file_identifier)
+
+        if not storage_service.file_exists(local_input_path):
+            app_logger.error("FILE PATH NOT FOUND")
+            raise HTTPException(status_code=400, detail="FILE PATH NOT FOUND")
+        
+        # Delegate to the worker function
         app_logger.info(f"DELEGATING TO THE WORKER FUNCTION FOR IMAGE DESCRIPTION")
         app_logger.info(f"GETTING SERVICE FROM THE FACTORY WITH MODEL NAME: gemini")
         service = get_service() # By default gemini is used
-        description = service.generate_image_description(file_path)
+        description = service.generate_image_description(local_input_path)
         app_logger.info(f"IMAGE DESCRIPTION GENERATED SUCCESSFULLY: {description}")
         return description
     except Exception as e:
