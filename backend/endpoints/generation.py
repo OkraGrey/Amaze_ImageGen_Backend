@@ -88,3 +88,28 @@ async def download_image(file_path: str = Form(...)):
     except Exception as e:
         app_logger.error(f"FAILED TO REMOVE BACKGROUND USING PHOTOTOOM: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/generate/generate_image_description")
+async def generate_image_description(file_path: str = Form(...)):
+    app_logger.info(
+        "IMG DESCRIPTION ENDPOINT ACCESSED",
+        extra={
+            "file_path": file_path,
+        },
+    )
+    
+    if not os.path.exists(file_path):
+        app_logger.error("FILE PATH NOT FOUND")
+        raise HTTPException(status_code=400, detail="FILE PATH NOT FOUND")
+    
+    # Delegate to the worker function
+    try:
+        app_logger.info(f"DELEGATING TO THE WORKER FUNCTION FOR IMAGE DESCRIPTION")
+        app_logger.info(f"GETTING SERVICE FROM THE FACTORY WITH MODEL NAME: gemini")
+        service = get_service() # By default gemini is used
+        description = service.generate_image_description(file_path)
+        app_logger.info(f"IMAGE DESCRIPTION GENERATED SUCCESSFULLY: {description}")
+        return description
+    except Exception as e:
+        app_logger.error(f"FAILED TO GENERATE IMAGE DESCRIPTION: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

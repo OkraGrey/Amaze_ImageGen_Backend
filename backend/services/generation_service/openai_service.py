@@ -9,13 +9,14 @@ import uuid
 from pathlib import Path
 from backend.config.settings import RESULT_DIR
 from backend.utils.logger import app_logger
-from backend.config.settings import OPENAI_API_KEY, OPENAI_MODEL
+from backend.config.settings import OPENAI_API_KEY, OPENAI_IMG_MODEL, OPENAI_DESC_MODEL
 
 class OpenAIService(BaseImageGenerationService):    
     def __init__(self):
-        app_logger.info(f"INITIALIZING OPENAI SERVICE WITH MODEL: {OPENAI_MODEL}")
+        app_logger.info(f"INITIALIZING OPENAI SERVICE")
         self.client = OpenAI(api_key=OPENAI_API_KEY)
-        self.model = OPENAI_MODEL
+        self.img_model = OPENAI_IMG_MODEL
+        self.desc_model = OPENAI_DESC_MODEL
     
     def generate_image(self, prompt, image_path=None):
 
@@ -25,7 +26,7 @@ class OpenAIService(BaseImageGenerationService):
             if image_path and os.path.exists(image_path):
                 app_logger.info(f"RECIEVED IMAGE PATH")
                 result = self.client.images.edit(
-                    model=self.model,
+                    model=self.img_model,
                     image=[open(image_path, "rb")],
                     prompt=prompt,
                     input_fidelity="high",

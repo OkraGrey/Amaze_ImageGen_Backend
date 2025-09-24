@@ -13,8 +13,11 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PHOTOTOOM_API_KEY = os.getenv("PHOTOTOOM_API_KEY")
 # Gemini model configuration
-GEMINI_MODEL = "gemini-2.5-flash-image-preview"
-OPENAI_MODEL = "gpt-image-1"
+GEMINI_IMG_MODEL = "gemini-2.5-flash-image-preview"
+GEMINI_DESC_MODEL = "gemini-2.5-flash"
+
+OPENAI_IMG_MODEL = "gpt-image-1"
+OPENAI_DESC_MODEL = "gpt-5"
 # Upload configuration
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)

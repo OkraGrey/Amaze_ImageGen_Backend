@@ -9,7 +9,7 @@ SERVICES = {
     "openai": OpenAIService(),
 }
 
-def get_service(model_name: str) -> BaseImageGenerationService:
+def get_service(model_name: str= 'gemini') -> BaseImageGenerationService:
 
     app_logger.info(f"RECEIVED MODEL NAME IN GET SERVICE: {model_name}")
     service = SERVICES.get(model_name.lower())
