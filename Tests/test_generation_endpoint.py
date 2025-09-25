@@ -139,7 +139,7 @@ class TestImageGenerationEndpoint:
             data={"prompt": "Large file", "model": "openai"},
             files={"file": ("large.png", large_bytes, "image/png")},
         )
-        assert response.status_code in (400, 413, 422)
+        assert response.status_code == 413
 
     def test_corrupted_image_file(self):
         corrupted_bytes = BytesIO(b"not an image")

@@ -22,7 +22,7 @@ class GoogleDriveStorage(FileStorage):
         self.uploads_folder_id = get_or_create_folder(self.service, "uploads", parent_id=GOOGLE_DRIVE_APP_FOLDER_ID)
         self.results_folder_id = get_or_create_folder(self.service, "results", parent_id=GOOGLE_DRIVE_APP_FOLDER_ID)
 
-    def save_upload(self, file: UploadFile) -> str:
+    def _save_upload(self, file: UploadFile) -> str:
         app_logger.info(f"ENTERING SAVE UPLOAD FUNCTION FOR GCP")
         content = file.file.read()
         filename = f"{uuid.uuid4().hex}_{file.filename}"

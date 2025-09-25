@@ -6,7 +6,7 @@ from backend.config.settings import UPLOAD_DIR, RESULT_DIR, MAX_FILE_SIZE
 from backend.utils.file_utils import allowed_file
 
 class LocalStorage(FileStorage):
-    def save_upload(self, file: UploadFile) -> str:
+    def _save_upload(self, file: UploadFile) -> str:
         # Check file size
         file.file.seek(0, os.SEEK_END)
         file_size = file.file.tell()
@@ -18,14 +18,14 @@ class LocalStorage(FileStorage):
         # Generate a unique filename
         original_filename = file.filename
         extension = original_filename.rsplit('.', 1)[1].lower() if '.' in original_filename else ''
-        filename = f"{uuid.uuid4().hex}.{extension}"
+        identifier = f"{uuid.uuid4().hex}.{extension}"
         
         # Save the file
-        file_path = os.path.join(UPLOAD_DIR, filename)
+        file_path = os.path.join(UPLOAD_DIR, identifier)
         with open(file_path, "wb") as buffer:
             buffer.write(file.file.read())
         
-        return filename
+        return identifier
 
     def save_result(self, image_data: bytes, extension: str = 'png') -> str:
         filename = f"generated_{uuid.uuid4().hex}.{extension}"

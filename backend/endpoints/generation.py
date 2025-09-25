@@ -6,10 +6,12 @@ from typing import Optional
 from fastapi.responses import JSONResponse
 from backend.utils.logger import app_logger
 from backend.utils.file_utils import allowed_file
+from backend.utils.custom_exceptions import FileTooLargeError
 from backend.services.generation_service.service_factory import get_service
 from backend.services.storage.storage_factory import get_storage_service
 from backend.config.settings import PHOTOTOOM_API_KEY
 from backend.services.bg_rem.download_service import process_download_image
+from backend.services.upscale.upscale_service import PicsartUpscaleService
 
 router = APIRouter()
 
@@ -66,6 +68,8 @@ async def generate_image(
             })
         else:
             raise HTTPException(status_code=400, detail="SERVICE NOT FOUND")
+    except FileTooLargeError as e:
+        raise HTTPException(status_code=413, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except HTTPException as e:
@@ -147,4 +151,42 @@ async def generate_image_description(file_identifier: str = Form(...)):
         return description
     except Exception as e:
         app_logger.error(f"FAILED TO GENERATE IMAGE DESCRIPTION: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/upscale")
+async def upscale_image(
+    image_identifier: str = Form(...),
+    upscale_factor: int = Form(...)
+):
+    """Upscale image endpoint."""
+    app_logger.info(f"UPSCALE IMAGE ENDPOINT ACCESSED", extra={
+        "image_identifier": image_identifier,
+        "upscale_factor": upscale_factor,
+    })
+
+    if upscale_factor not in [2, 4]:
+        app_logger.error(f"Invalid upscale factor: {upscale_factor}. Must be 2 or 4.")
+        raise HTTPException(status_code=400, detail="Upscale factor must be 2 or 4.")
+
+    storage_service = get_storage_service()
+    
+    try:
+        upscale_service = PicsartUpscaleService(storage_service)
+        new_identifier, input_res, upscaled_res = upscale_service.upscale_image(image_identifier, upscale_factor)
+        result_uri = storage_service.get_results_uri(new_identifier)
+
+        return JSONResponse(content={
+            "success": True,
+            "message": "Image upscaled successfully",
+            "result_path": result_uri,
+            "result_identifier": new_identifier,
+            "input_resolution": input_res,
+            "upscaled_resolution": upscaled_res
+        })
+    except FileNotFoundError as e:
+        app_logger.error(f"Image not found for upscaling: {str(e)}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        app_logger.error(f"Failed to upscale image: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

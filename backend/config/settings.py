@@ -12,6 +12,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PHOTOTOOM_API_KEY = os.getenv("PHOTOTOOM_API_KEY")
+PICSART_API_KEY = os.getenv("PICSART_API_KEY")
+
+# Picsart API
+PICSART_UPSCALE_URL = "https://api.picsart.io/tools/1.0/upscale"
+
 # Gemini model configuration
 GEMINI_IMG_MODEL = "gemini-2.5-flash-image-preview"
 GEMINI_DESC_MODEL = "gemini-2.5-flash"
@@ -33,7 +38,7 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 MAX_FILE_SIZE = 10 * 1024 * 1024
 
 # Storage Type
-STORAGE_TYPE = os.getenv("STORAGE_TYPE", "local")
+STORAGE_TYPE = os.getenv("STORAGE_TYPE", "gcp") # gcp for Google Drive
 
 # Google Drive settings
 GOOGLE_DRIVE_APP_FOLDER_ID = os.getenv("GOOGLE_DRIVE_APP_FOLDER_ID")
