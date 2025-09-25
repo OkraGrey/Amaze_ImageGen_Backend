@@ -41,6 +41,6 @@ MAX_FILE_SIZE = 10 * 1024 * 1024
 STORAGE_TYPE = os.getenv("STORAGE_TYPE", "gcp") # gcp for Google Drive
 
 # Google Drive settings
-GOOGLE_DRIVE_APP_FOLDER_ID = os.getenv("GOOGLE_DRIVE_APP_FOLDER_ID")
+GOOGLE_DRIVE_APP_FOLDER_ID = os.getenv("GOOGLE_DRIVE_APP_FOLDER_ID") 
 GOOGLE_CLIENT_SECRET_FILE = os.path.join(BASE_DIR, "client_secret.json")
 GOOGLE_TOKEN_FILE = os.path.join(BASE_DIR, "token.json")
