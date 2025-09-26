@@ -23,12 +23,21 @@ GEMINI_DESC_MODEL = "gemini-2.5-flash"
 
 OPENAI_IMG_MODEL = "gpt-image-1"
 OPENAI_DESC_MODEL = "gpt-5"
+
+# Check if running on Vercel
+if os.getenv("VERCEL") == "1":
+    # Use the /tmp directory for uploads and results on Vercel
+    UPLOAD_DIR = "/tmp/uploads"
+    RESULT_DIR = "/tmp/results"
+else:
+    # Local setup
+    UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+    RESULT_DIR = os.path.join(BASE_DIR, "results")
+
 # Upload configuration
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Result configuration
-RESULT_DIR = os.path.join(BASE_DIR, "results")
 os.makedirs(RESULT_DIR, exist_ok=True)
 
 # Allowed file extensions
