@@ -3,7 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+load_dotenv(".env.local")
 
 # Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent.parent

@@ -11,7 +11,7 @@ from backend.config.logging_config import setup_logging
 from backend.middleware.logging_middleware import LoggingMiddleware
 from backend.utils.logger import app_logger
 # from backend.routes.generation_routes import router as generation_router
-# from backend.config.settings import UPLOAD_DIR, RESULT_DIR
+from backend.config.settings import UPLOAD_DIR, RESULT_DIR
 
 # Setup logging first
 setup_logging()
@@ -39,8 +39,8 @@ app.include_router(router=generation_router)
 # app.include_router(generation_router, tags=["generation"])
 
 # Mount static directories
-# app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
-# app.mount("/results", StaticFiles(directory=RESULT_DIR), name="results")
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+app.mount("/results", StaticFiles(directory=RESULT_DIR), name="results")
 
 # Root endpoint
 @app.get("/")
@@ -51,4 +51,4 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("backend.app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
