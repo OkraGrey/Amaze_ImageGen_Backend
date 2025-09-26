@@ -1,0 +1,29 @@
+# Vercel deployment ignore file
+
+# Python virtual environment
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Logs
+logs/
+
+# User uploaded files and generated results
+uploads/
+results/
+
+# Tests
+Tests/
+
+# Documentation/Tickets
+Tickets/
+
+# Testing files
+testing_main.py
+test_client.png
+
+# Sensitive files (should use environment variables)
+token.json
+client_secret.json
